@@ -1,606 +1,451 @@
 #include <iostream>
 #include <cmath>
+#include <vector>
 #include <cstdlib>
 #include <ctime>
-#include <algorithm>
 #include <limits>
+#include <algorithm>
 
 using namespace std;
 
-// ´e∏m¡n©˙
-class Character;
-
-// Monster √˛ßO©w∏q
-class Monster {
-private:
-    string name;
-    int expReward;
-    int health;
-
-public:
-   	
-	Monster(string n, int exp, int hp) : name(n), expReward(exp), health(static_cast<int>(hp * 1.5)) {}
-    string getName() { return name; }
-    int getExpReward() { return expReward; }
-    int getHealth() { return health; }
-    void takeDamage(int damage) { health -= damage; }
-    bool isDefeated() { return health <= 0; }
-    void counterAttack(Character* player);
-};
-
 class Character {
 protected:
-    static const int EXP_LV = 100;
+    static const int EXP_LV;
     string name;
+    int hp;
+    int maxHP;
     int level;
     int exp;
     int power;
     int knowledge;
     int luck;
-    int mana;
-    int maxMana;
-    int health;
-    int maxHealth;
-    int currentHealth;
-    int currentMana;
-	int gold;
-	int basePower;  
-	int weaponBonus;  
-
-    void levelUp(int pInc, int kInc, int lInc, int mInc, int hInc);
+    void levelUp(int hInc, int pInc, int kInc, int lInc);
+    vector<string> skills;
 
 public:
-    Character(string n, int lv, int po, int kn, int lu, int ma, int hp)
-    : name(n), level(lv), exp(pow(lv - 1, 2) * EXP_LV), power(po), knowledge(kn), luck(lu),
-      mana(ma), maxMana(ma), health(hp), maxHealth(hp), gold(100), weaponBonus(0) {}
-
-
-    void print();
-    void gainExp(int exp);
-    string getName() { return name; }
-    void recoverMana(int amount);
-    void recoverHealth(int amount);
-    void takeDamage(int damage);
-    void recoverOnKill();
-    bool hasEnoughMana(int cost);
-    virtual void useSkill(int choice, int& damage) = 0;
-    virtual int attack() {
-    int damage = getPower() + luck;
-    cout << name << " ∂i¶Ê§F¥∂≥qß¿ª°A≥y¶® " << damage << " ¬I∂ÀÆ`°C\n";
-    return damage;
-	}
-
-	virtual int getAverageSkillDamage() { return getPower() * 1.9; }
-
-
-    
-    int getMaxHealth() const { return maxHealth; }
-    int getMaxMana() const { return maxMana; }
-	int getGold() const { return gold; }     
-    void addGold(int amount) { gold += amount; }  
-    bool spendGold(int amount) {                
-        if (gold >= amount) {
-            gold -= amount;
-            return true;
-        } else {
-            cout << "™˜πÙ§£®¨°I\n";
-            return false;
-        } 
-    } 
-	void upgradeWeapon(int bonus) {
-    weaponBonus += bonus;
-    cout << "™Zæπ§…Ø≈¶®•\°Aß¿ª§OºW•[ " << bonus << " ¬I°I\n";
-	}
-
-	int getPower() const { return basePower + weaponBonus; }
-
+    Character(string n, int lv, int h, int po, int kn, int lu);
+    virtual void print();
+    virtual void beatMonster(int exp) = 0;
+    virtual void setHP(int) = 0;
+    virtual int getHP() = 0;
+    virtual int getAttack() = 0;
+    virtual int useSkill(vector<Character*>& team);
+    string getName();
+    void chooseSkills(vector<string> skillOptions);
 };
 
-// ©w∏q Character ™∫¶®≠˚®Áº∆
-void Character::levelUp(int pInc, int kInc, int lInc, int mInc, int hInc) {
-    this->level++;
-    this->power += pInc;
-    this->knowledge += kInc;
-    this->luck += lInc;
-    this->maxMana += mInc;
-    this->maxHealth += hInc;
-    this->mana = this->maxMana;
-    this->health = this->maxHealth;
-    cout << "Æ•≥ﬂ " << this->name << " §…Ø≈®Ïµ•Ø≈ " << this->level << "°I\n";
+const int Character::EXP_LV = 100;
+
+Character::Character(string n, int lv, int h, int po, int kn, int lu) {
+    name = n;
+    level = lv;
+    exp = pow(lv - 1, 2) * EXP_LV;
+    hp = h;
+    maxHP = h;
+    power = po;
+    knowledge = kn;
+    luck = lu;
+}
+
+string Character::getName() {
+    return name;
+}
+
+int Character::useSkill(vector<Character*>& team) {
+    if (skills.empty()) {
+        cout << "Ê≤íÊúâÂèØÁî®ÁöÑÊäÄËÉΩÔºÅ\n";
+        return 0;
+    }
+
+    int skillChoice;
+    int damage = 0;
+    int maxHpIncrease = 0;
+    string chosenSkill;
+    cout << "ÂèØÁî®ÊäÄËÉΩÔºö\n";
+    for (size_t i = 0; i < skills.size(); ++i) {
+        cout << i + 1 << ". " << skills[i] << "\n";
+    }
+
+    while (true) {
+        cout << "ÈÅ∏ÊìáÊäÄËÉΩ (Ëº∏ÂÖ•Â∞çÊáâÊï∏Â≠ó): ";
+        cin >> skillChoice;
+        if (skillChoice >= 1 && skillChoice <= (int)skills.size()) {
+            chosenSkill = skills[skillChoice - 1];
+            break;
+        }
+        cout << "Ëº∏ÂÖ•ÁÑ°ÊïàÔºåË´ãÈáçÊñ∞ÈÅ∏ÊìáÊäÄËÉΩ„ÄÇ\n";
+    }
+
+    cout << name << " ‰ΩøÁî®‰∫ÜÊäÄËÉΩÔºö" << chosenSkill << "ÔºÅ\n";
+
+    if (chosenSkill == "ÁãÇÊÄí") {
+        damage = power * 2;
+    } else if (chosenSkill == "ÈáçÊìä") {
+        damage = power + 30;
+    } else if (chosenSkill == "ÁõæÊìä") {
+        damage = power / 2 + 15;
+        cout << name << " ‰ΩøÁî®ÁõæÊìäÔºåÈôç‰ΩéÊïµÊñπÊîªÊìäÂäõ 5 ÈªûÔºÅ\n";
+    } else if (chosenSkill == "ÁÅ´ÁêÉË°ì") {
+        damage = knowledge * 2;
+    } else if (chosenSkill == "ÂÜ∞ÈúúÁÆ≠") {
+        damage = knowledge * 1.5 + 10;
+    } else if (chosenSkill == "ÈñÉÈõªÈèà") {
+        damage = knowledge * 1.8;
+    } else if (chosenSkill == "ËÉåÂà∫") {
+        damage = power * 2.5;
+    } else if (chosenSkill == "ÊØíÂàÉ") {
+        damage = power + 20;
+    } else if (chosenSkill == "Áà™Êìä") {
+        damage = power + 10;
+    } else {
+        cout << "ÁÑ°ÊïàÁöÑÊäÄËÉΩÈÅ∏Êìá„ÄÇ\n";
+        return 0;
+    }
+
+    cout << name << " ÈÄ†Êàê " << damage << " ÈªûÂÇ∑ÂÆ≥ÔºÅ\n";
+    return damage;
+}
+
+void Character::levelUp(int hInc, int pInc, int kInc, int lInc) {
+    level++;
+    exp -= pow(level - 1, 2) * EXP_LV;
+    hp += hInc;
+    maxHP += hInc;
+    power += pInc;
+    knowledge += kInc;
+    luck += lInc;
+    cout << name << " ÂçáÁ¥ö‰∫ÜÔºÅÁîüÂëΩÂÄº+" << hInc << " ÂäõÈáè+" << pInc << " Êô∫Âäõ+" << kInc << " Âπ∏ÈÅã+" << lInc << "\n";
 }
 
 void Character::print() {
-    cout << this->name << ": µ•Ø≈ " << this->level 
-         << " | ∏g≈Á≠»: " << this->exp << "/" << pow(this->level, 2) * EXP_LV
-         << " | ™˜πÙ: " << this->gold 
-         << " | ≈]§O: " << this->mana << "/" << this->maxMana
-         << " | •Õ©R≠»: " << this->health << "/" << this->maxHealth << "\n";
+    cout << name << ": Á≠âÁ¥ö " << level << " (Á∂ìÈ©óÂÄº: " << exp << "/" << pow(level, 2) * EXP_LV
+         << "), ÁîüÂëΩÂÄº: " << hp << "/" << maxHP << " ÊîªÊìäÂäõ: " << power
+         << " Êô∫Âäõ: " << knowledge << " Âπ∏ÈÅã: " << luck << "\n";
 }
 
+class Warrior : public Character {
+private:
+    static const int HP_LV;
+    static const int PO_LV;
+    static const int KN_LV;
+    static const int LU_LV;
 
-void Character::recoverMana(int amount) {
-    this->mana = min(this->mana + amount, this->maxMana);
-}
-
-void Character::recoverHealth(int amount) {
-    this->health = min(this->health + amount, this->maxHealth);
-}
-
-void Character::takeDamage(int damage) {
-    this->health -= damage;
-    cout << this->name << " ®¸®Ï " << damage << " ¬I∂ÀÆ`°A≥—æl•Õ©R≠»: " << this->health << "/" << this->maxHealth << "\n";
-    if (this->health <= 0) {
-        cout << this->name << " §w∏g¶∫§`°IπC¿∏µ≤ßÙ°C\n";
-        exit(0);
-    }
-}
-
-bool Character::hasEnoughMana(int cost) {
-    return this->mana >= cost;
-}
-
-void Character::gainExp(int exp) {
-    this->exp += exp;
-    while (this->exp >= pow(this->level, 2) * EXP_LV) {
-        this->exp -= pow(this->level, 2) * EXP_LV;
-    }
-}
-
-void Character::recoverOnKill() {
-    int recoveryAmount = static_cast<int>(maxHealth * 0.1); // ¶^¥_ 10% ™∫•Õ©R≠»
-    recoverHealth(recoveryAmount);
-    cout << this->name << " ¿ª±˛§Fºƒ§H°A¶^¥_§F " << recoveryAmount << " ¬I•Õ©R≠»°I\n";
-}
-
-
-
-class Shop {
 public:
-    static void enterShop(Character* player) {
-        cout << "\n≈w™Ô®”®Ï∞”´∞°I\n";
-        cout << "1. ¡ ∂R•Õ©R√ƒ§Ù (50™˜πÙ) - ´Ï¥_50%•Õ©R\n";
-        cout << "2. ¡ ∂R≈]§O√ƒ§Ù (50™˜πÙ) - ´Ï¥_50%≈]§O\n";
-        cout << "3. §…Ø≈™Zæπ (100™˜πÙ) - ºW•[10¬Iß¿ª§O\n";
-        cout << "4. ¬˜∂}∞”´∞\n";
+    Warrior(string n, int lv = 1) : Character(n, lv, lv * HP_LV, lv * PO_LV, lv * KN_LV, lv * LU_LV) {
+        skills.push_back("ÈáçÊìä");
+        skills.push_back("ÁõæÊìä");
+        skills.push_back("ÁãÇÊÄí");
+    }    
 
+    void print() { cout << "Êà∞Â£´ "; Character::print(); }
+    int getHP() { return hp; }
+    void setHP(int hp) { this->hp = hp; }
+    int getAttack() { return power; }
+    void beatMonster(int exp) {
+        this->exp += exp;
+        while (this->exp >= pow(this->level, 2) * EXP_LV)
+            this->levelUp(HP_LV, PO_LV, KN_LV, LU_LV);
+    }
+    int useSkill(vector<Character*>& team);
+};
+
+int Warrior::useSkill(vector<Character*>& team) {
+    return Character::useSkill(team);
+}
+
+const int Warrior::HP_LV = 100;
+const int Warrior::PO_LV = 10;
+const int Warrior::KN_LV = 5;
+const int Warrior::LU_LV = 5;
+
+class Wizard : public Character {
+private:
+    static const int HP_LV;
+    static const int PO_LV;
+    static const int KN_LV;
+    static const int LU_LV;
+
+public:
+    Wizard(string n, int lv = 1) : Character(n, lv, lv * HP_LV, lv * PO_LV, lv * KN_LV, lv * LU_LV) {
+        skills.push_back("ÁÅ´ÁêÉË°ì");
+        skills.push_back("ÂÜ∞ÈúúÁÆ≠");
+        skills.push_back("ÈñÉÈõªÈèà");
+    }
+
+    void print() { cout << "Ê≥ïÂ∏´ "; Character::print(); }
+    int getHP() { return hp; }
+    void setHP(int hp) { this->hp = hp; }
+    int getAttack() { return knowledge; }
+    void beatMonster(int exp) {
+        this->exp += exp;
+        while (this->exp >= pow(this->level, 2) * EXP_LV)
+            this->levelUp(HP_LV, PO_LV, KN_LV, LU_LV);
+    }
+    int useSkill(vector<Character*>& team);
+};
+
+int Wizard::useSkill(vector<Character*>& team) {
+    return Character::useSkill(team);
+}
+
+const int Wizard::HP_LV = 80;
+const int Wizard::PO_LV = 4;
+const int Wizard::KN_LV = 15;
+const int Wizard::LU_LV = 7;
+
+class Rogue : public Character {
+private:
+    static const int HP_LV;
+    static const int PO_LV;
+    static const int KN_LV;
+    static const int LU_LV;
+
+public:
+    Rogue(string n, int lv = 1) : Character(n, lv, lv * HP_LV, lv * PO_LV, lv * KN_LV, lv * LU_LV) {
+        skills.push_back("ËÉåÂà∫");
+        skills.push_back("ÊØíÂàÉ");
+        skills.push_back("Áà™Êìä");
+    }
+
+    void print() { cout << "ÁõúË≥ä "; Character::print(); }
+    int getHP() { return hp; }
+    void setHP(int hp) { this->hp = hp; }
+    int getAttack() { return luck; }
+    void beatMonster(int exp) {
+        this->exp += exp;
+        while (this->exp >= pow(this->level, 2) * EXP_LV)
+            this->levelUp(HP_LV, PO_LV, KN_LV, LU_LV);
+    }
+    int useSkill(vector<Character*>& team);
+};
+
+
+int Rogue::useSkill(vector<Character*>& team) {
+    return Character::useSkill(team);
+}
+
+const int Rogue::HP_LV = 90;
+const int Rogue::PO_LV = 7;
+const int Rogue::KN_LV = 7;
+const int Rogue::LU_LV = 15;
+
+enum MonsterType { NORMAL, ELITE, BOSS };
+
+class Monster {
+public:
+    string name;
+    int hp;
+    int attack;
+    MonsterType type;
+
+    Monster(string n, int h, int a, MonsterType t) : name(n), hp(h), attack(a), type(t) {}
+
+    void print() {
+        cout << name << " ÁîüÂëΩÂÄº: " << hp << " ÊîªÊìäÂäõ: " << attack << " È°ûÂûã: ";
+        switch (type) {
+            case NORMAL: cout << "ÊôÆÈÄöÊÄ™Áâ©\n"; break;
+            case ELITE: cout << "ËèÅËã±ÊÄ™\n"; break;
+            case BOSS: cout << "BOSS\n"; break;
+        }
+    }
+
+    int getHP() { return hp; }
+    void setHP(int newHP) { hp = newHP; }
+    int getAttack() { return attack; }
+};
+
+Monster generateMonster(const vector<Character*>& team) {
+    int totalLevel = 0;
+    for (size_t i = 0; i < team.size(); ++i) {
+        totalLevel += team[i]->getAttack();
+    }
+
+    int baseHP = 120;
+    int baseAttack = 12;
+
+    int averageLevel = totalLevel / team.size();
+    int hp = baseHP + (averageLevel * 6);
+    int attack = baseAttack + (averageLevel * 2);
+
+	vector<string> monsterNames;
+    monsterNames.push_back("Âì•Â∏ÉÊûó");
+    monsterNames.push_back("Áãº‰∫∫");
+    monsterNames.push_back("È£ü‰∫∫È≠î");
+
+
+    int index = rand() % monsterNames.size();
+    MonsterType type = NORMAL;
+
+    if (averageLevel >= 10 && rand() % 3 == 0) {
+        type = ELITE;
+        hp += 80;
+        attack += 5;
+    } else if (averageLevel >= 20 && rand() % 5 == 0) {
+        type = BOSS;
+        hp += 150;
+        attack += 10;
+    }
+
+    cout << "Áî¢ÁîüÁöÑÊÄ™Áâ©: " << monsterNames[index]
+         << " Ë°ÄÈáè: " << hp
+         << ", ÊîªÊìäÂäõ: " << attack
+         << ", È°ûÂûã: " << (type == BOSS ? "BOSS" : (type == ELITE ? "ËèÅËã±ÊÄ™" : "ÊôÆÈÄöÊÄ™Áâ©")) << "\n";
+
+    return Monster(monsterNames[index], hp, attack, type);
+}
+
+void battle(vector<Character*>& team, Monster* monster) {
+    cout << "Êà∞È¨•ÈñãÂßãÔºÅ\n";
+
+    while (true) {
+        for (size_t i = 0; i < team.size(); ++i) {
+            if (team[i]->getHP() > 0) {
+                int choice;
+                cout << team[i]->getName() << " ÂõûÂêàÔºö\n1. ÊôÆÈÄöÊîªÊìä\n2. ‰ΩøÁî®ÊäÄËÉΩ\nÈÅ∏Êìá: ";
+                cin >> choice;
+
+                int damage = (choice == 2) ? team[i]->useSkill(team) : team[i]->getAttack();
+                monster->setHP(monster->getHP() - damage);
+
+                cout << team[i]->getName() << " Â∞ç " << monster->name << " ÈÄ†Êàê " << damage << " ÈªûÂÇ∑ÂÆ≥ÔºÅ\n";
+
+                if (monster->getHP() <= 0) {
+                    cout << monster->name << " Ë¢´ÊìäÊïó‰∫ÜÔºÅÊà∞È¨•ÂãùÂà©ÔºÅ\n";
+                    int expDrop = (monster->type == BOSS) ? 200 : 50;
+                    for (size_t j = 0; j < team.size(); ++j) {
+                        if (team[j]->getHP() > 0) {
+                            team[j]->beatMonster(expDrop);
+                        }
+                    }
+                    return;
+                }
+            }
+        }
+
+        int aliveCount = 0;
+        for (size_t i = 0; i < team.size(); ++i) {
+            if (team[i]->getHP() > 0) {
+                aliveCount++;
+            }
+        }
+
+        if (aliveCount > 0) {
+            int damagePerCharacter = monster->getAttack() / aliveCount;
+            cout << monster->name << " ÈñãÂßãÊîªÊìäÊâÄÊúâÂ≠òÊ¥ªÁöÑËßíËâ≤ÔºåÊØè‰∫∫ÂèóÂà∞ " << damagePerCharacter << " ÈªûÂÇ∑ÂÆ≥ÔºÅ\n";
+
+            if (monster->type == BOSS) {
+                int bossSpecialDamage = monster->getAttack() * 1.5;
+                for (size_t i = 0; i < team.size(); ++i) {
+                    if (team[i]->getHP() > 0) {
+                        team[i]->setHP(team[i]->getHP() - bossSpecialDamage);
+                        cout << monster->name << " ‰ΩøÁî®ÁâπÊÆäÊîªÊìäÂ∞ç " << team[i]->getName() << " ÈÄ†Êàê " << bossSpecialDamage << " ÈªûÂÇ∑ÂÆ≥ÔºÅ\n";
+                    }
+                }
+            }
+
+            for (size_t i = 0; i < team.size(); ++i) {
+                if (team[i]->getHP() > 0) {
+                    team[i]->setHP(team[i]->getHP() - damagePerCharacter);
+                    if (team[i]->getHP() <= 0) {
+                        team[i]->setHP(0);
+                        cout << team[i]->getName() << " Â∑≤Èô£‰∫°ÔºÅ\n";
+                    } else {
+                        cout << team[i]->getName() << " ÂèóÂà∞ " << damagePerCharacter << " ÈªûÂÇ∑ÂÆ≥ÔºåÂâ©È§òÁîüÂëΩÂÄº: " << team[i]->getHP() << "\n";
+                    }
+                }
+            }
+        }
+
+        bool allDead = true;
+        for (size_t i = 0; i < team.size(); ++i) {
+            if (team[i]->getHP() > 0) {
+                allDead = false;
+                break;
+            }
+        }
+        if (allDead) {
+            cout << "ÊâÄÊúâËßíËâ≤Â∑≤Èô£‰∫°ÔºåÊà∞È¨•Â§±ÊïóÔºÅ\n";
+            return;
+        }
+    }
+}
+
+
+
+
+int main() {
+    srand(time(0));
+
+    vector<string> warriorSkills;
+    warriorSkills.push_back("ÈáçÊìä");
+    warriorSkills.push_back("ÁõæÂÆà");
+    warriorSkills.push_back("ÁãÇÊÄí");
+
+    vector<string> wizardSkills;
+    wizardSkills.push_back("ÁÅ´ÁêÉË°ì");
+    wizardSkills.push_back("ÂÜ∞ÈúúÁÆ≠");
+    wizardSkills.push_back("ÈñÉÈõªÈèà");
+
+    vector<string> rogueSkills;
+    rogueSkills.push_back("ËÉåÂà∫");
+    rogueSkills.push_back("ÊØíÂàÉ");
+    rogueSkills.push_back("ÊΩõË°å");
+
+    vector<Character*> team;
+
+    for (int i = 0; i < 3; ++i) {
+        string name;
         int choice;
+
+        cout << "Ë´ãËº∏ÂÖ•ËßíËâ≤" << (i + 1) << "ÁöÑÂêçÂ≠ó: ";
+        cin >> name;
+
+        cout << "ÈÅ∏ÊìáËÅ∑Ê•≠:\n1. Êà∞Â£´\n2. Ê≥ïÂ∏´\n3. ÁõúË≥ä\nÈÅ∏Êìá: ";
         cin >> choice;
 
         switch (choice) {
             case 1:
-                if (player->spendGold(50)) {
-                    player->recoverHealth(player->getMaxHealth() / 2);
-                    cout << "ßA¡ ∂R§F•Õ©R√ƒ§Ù®√´Ï¥_§F•Õ©R≠»°I" << endl;
-
-                }
+                team.push_back(new Warrior(name));
                 break;
             case 2:
-                if (player->spendGold(50)) {
-                    player->recoverMana(player->getMaxMana() / 2);
-                    cout << "ßA¡ ∂R§F≈]§O√ƒ§Ù®√´Ï¥_§F≈]§O°I\n";
-                }
+                team.push_back(new Wizard(name));
                 break;
             case 3:
-    			if (player->spendGold(100)) {
-        			player->upgradeWeapon(10);
-    			}
-    			break;
-			case 4:
-                cout << "ßA¬˜∂}§F∞”´∞°C\n";
+                team.push_back(new Rogue(name));
                 break;
             default:
-                cout << "µLÆƒ™∫øÔæ‹°C\n";
-                break;
-        }
-    }
-};
-
-
-// ƒ~©”√˛ßO°GWarrior
-class Warrior : public Character {
-private:
-    static const int PO_LV = 5;
-    static const int KN_LV = 1;
-    static const int LU_LV = 2;
-    static const int MA_LV = 20;
-    static const int HP_LV = 50;
-
-public:
-    Warrior(string n, int lv = 1)
-        : Character(n, lv, lv * PO_LV, lv * KN_LV, lv * LU_LV, lv * MA_LV, lv * HP_LV) {}
-
-    void print() { cout << "æ‘§h "; Character::print(); }
-
-    void gainExp(int exp) {
-        this->exp += exp;
-        while (this->exp >= pow(this->level, 2) * EXP_LV) {
-            this->levelUp(PO_LV, KN_LV, LU_LV, MA_LV, HP_LV);
+                cout << "ÁÑ°ÊïàÁöÑÈÅ∏ÊìáÔºÅÈ†êË®≠ÁÇ∫Êà∞Â£´„ÄÇ\n";
+                team.push_back(new Warrior(name));
         }
     }
 
-    void useSkill(int choice, int& damage) {
-        int cost;
-        if (choice == 1)
-            cost = static_cast<int>(maxMana * 0.3);
-        else if (choice == 2)
-            cost = static_cast<int>(maxMana * 0.6);
-        else {
-            cout << "µLÆƒ™∫ßﬁØ‡øÔæ‹°C\n";
-            damage = 0;
-            return;
-        }
+    cout << "ËßíËâ≤Â∑≤ÂâµÂª∫ÔºÅ" << endl;
 
-        if (!hasEnoughMana(cost)) {
-            cout << "≈]§O§£®¨°AµL™k®œ•ŒßﬁØ‡°I\n";
-            damage = 0;
-            return;
-        }
+    bool playing = true;
+    while (playing) {
+        Monster monster = generateMonster(team);
+        monster.print();
 
-        mana -= cost;
+        battle(team, &monster);
 
-        if (choice == 1) {
-            cout << "ßA®œ•Œ§F±j§O§@¿ª (≈]§OÆ¯Ø”: " << cost << ")°I\n";
-            damage = static_cast<int>(getPower() * 1.8);
-
-        } else if (choice == 2) {
-            cout << "ßA®œ•Œ§F¨ﬁ¿ª (≈]§OÆ¯Ø”: " << cost << ")°I\n";
-            damage = static_cast<int>(getPower() * 2.5);
-
-        }
-    }
-
-    
-    int attack() {
-        return static_cast<int>((getPower() + luck) * 1.8);
-    }
-
-    int getAverageSkillDamage() {
-        return static_cast<int>(this->power * 1.9);
-    }
-};
-
-// Mage √˛ßO©w∏q
-class Mage : public Character
-{
-private:
-    static const int PO_LV = 1;
-    static const int KN_LV = 5;
-    static const int LU_LV = 3;
-    static const int MA_LV = 30;
-    static const int HP_LV = 40;
-
-public:
-    Mage(string n, int lv = 1)
-        : Character(n, lv, lv * PO_LV, lv * KN_LV, lv * LU_LV, lv * MA_LV, lv * HP_LV) {}
-
-    void print() { cout << "™kÆv "; Character::print(); }
-
-    void gainExp(int exp)
-    {
-        this->exp += exp;
-        while (this->exp >= pow(this->level, 2) * EXP_LV)
-        {
-            this->levelUp(PO_LV, KN_LV, LU_LV, MA_LV, HP_LV);
-        }
-    }
-
-    void useSkill(int choice, int &damage)
-    {
-        int cost;
-        if (choice == 1)
-            cost = static_cast<int>(maxMana * 0.3);
-        else if (choice == 2)
-            cost = static_cast<int>(maxMana * 0.6);
-        else
-        {
-            cout << "µLÆƒ™∫ßﬁØ‡øÔæ‹°C\n";
-            damage = 0;
-            return;
-        }
-
-        if (!hasEnoughMana(cost))
-        {
-            cout << "≈]§O§£®¨°AµL™k®œ•ŒßﬁØ‡°I\n";
-            damage = 0;
-            return;
-        }
-
-        mana -= cost;
-
-        if (choice == 1)
-        {
-            cout << "ßA®œ•Œ§F§ı≤y≥N (≈]§OÆ¯Ø”: " << cost << ")°I\n";
-            damage = static_cast<int>(getPower() * 1.5 + knowledge * 2.0);
-        }
-        else if (choice == 2)
-        {
-            cout << "ßA®œ•Œ§F≈]™k¨ﬁ (≈]§OÆ¯Ø”: " << cost << ")°I\n";
-            damage = static_cast<int>(getPower() * 1.2 + knowledge * 3.0);
-        }
-    }
-
-    int attack() {
-        return static_cast<int>((getPower() + knowledge) * 1.6);
-    }
-
-
-    int getAverageSkillDamage()
-    {
-        return static_cast<int>(this->knowledge * 1.9);
-    }
-};
-
-// Ranger √˛ßO©w∏q
-class Ranger : public Character
-{
-private:
-    static const int PO_LV = 3;
-    static const int KN_LV = 2;
-    static const int LU_LV = 5;
-    static const int MA_LV = 25;
-    static const int HP_LV = 45;
-
-public:
-    Ranger(string n, int lv = 1)
-        : Character(n, lv, lv * PO_LV, lv * KN_LV, lv * LU_LV, lv * MA_LV, lv * HP_LV) {}
-
-    void print() { cout << "πC´L "; Character::print(); }
-
-    void gainExp(int exp)
-    {
-        this->exp += exp;
-        while (this->exp >= pow(this->level, 2) * EXP_LV)
-        {
-            this->levelUp(PO_LV, KN_LV, LU_LV, MA_LV, HP_LV);
-        }
-    }
-
-    void useSkill(int choice, int &damage)
-    {
-        int cost;
-        if (choice == 1)
-            cost = static_cast<int>(maxMana * 0.3);
-        else if (choice == 2)
-            cost = static_cast<int>(maxMana * 0.6);
-        else
-        {
-            cout << "µLÆƒ™∫ßﬁØ‡øÔæ‹°C\n";
-            damage = 0;
-            return;
-        }
-
-        if (!hasEnoughMana(cost))
-        {
-            cout << "≈]§O§£®¨°AµL™k®œ•ŒßﬁØ‡°I\n";
-            damage = 0;
-            return;
-        }
-
-        mana -= cost;
-
-        if (choice == 1)
-        {
-            cout << "ßA®œ•Œ§F∫Î∑«Æg¿ª (≈]§OÆ¯Ø”: " << cost << ")°I\n";
-            damage = static_cast<int>(getPower() * 1.7 + luck * 1.8);
-        }
-        else if (choice == 2)
-        {
-            cout << "ßA®œ•Œ§F¡Ù®≠≥N (≈]§OÆ¯Ø”: " << cost << ")°I\n";
-            damage = static_cast<int>(getPower() * 2.2 + luck * 2.5);
-        }
-    }
-
-    int attack() {
-        return static_cast<int>((getPower() + luck) * 1.7);
-    }
-
-    int getAverageSkillDamage()
-    {
-        return this->power + static_cast<int>(this->luck * 1.9);
-    }
-};
-
-
-void Monster::counterAttack(Character* player) {
-    int baseDamage = player->getMaxHealth() * (6 + rand() % 5) / 100;
-    bool isCritical = (rand() % 100) < 20;
-
-    int damage = baseDamage;
-    if (isCritical) {
-        damage = player->getMaxHealth() * (15 + rand() % 6) / 100;
-        cout << this->name << " ∂i¶Ê§F√z¿ª°I\n";
-    }
-
-    cout << this->name << " §œ¿ª®√≥y¶®§F " << damage << " ¬I∂ÀÆ`°I\n";
-    player->takeDamage(damage);
-}
-
-// •Õ¶®¿Hæ˜©«™´™∫®Áº∆
-Monster generateRandomMonster(Character *player)
-{
-    const string monsterNames[] = {"≠Ù•¨™L", "√~§H", "•®¿s", "•vµ‹©i", "ÌL´Õ"};
-    int index = rand() % 5;
-    int exp = (rand() % 50) + 10; // ∏g≈Á≠»§∂©Û10®Ï59§ß∂°
-
-    int averageSkillDamage = player->getAverageSkillDamage();
-    int health = static_cast<int>((averageSkillDamage * 1.8) + (player->getName().length() * 3));
-
-    // ºW•[§@®«¿Hæ˜© 
-    health += rand() % 20 - 10; // ºW•[©Œ¥Ó§÷≥Ã¶h10¬I
-    health = max(health, 20); // ΩT´O•Õ©R≠»¶‹§÷¨∞20
-
-    return Monster(monsterNames[index], exp, health);
-}
-
-int main()
-{
-    srand(static_cast<unsigned int>(time(0)));
-
-    string name;
-    int choice;
-    int stepsWithoutEncounter = 0;
-
-    cout << "Ω–øÈ§JßA™∫®§¶‚¶W∫Ÿ: ";
-    getline(cin, name);
-
-    cout << "øÔæ‹ßA™∫¬æ∑~:\n1. æ‘§h\n2. ™kÆv\n3. πC´L\nΩ–øÈ§JßA™∫øÔæ‹: ";
-    cin >> choice;
-
-    Character *player = NULL;
-
-    if (choice == 1)
-    {
-        player = new Warrior(name);
-    }
-    else if (choice == 2)
-    {
-        player = new Mage(name);
-    }
-    else if (choice == 3)
-    {
-        player = new Ranger(name);
-    }
-    else
-    {
-        cout << "µLÆƒ™∫øÔæ‹°I\n";
-        return 1;
-    }
-
-    player->print();
-
-    while (true)
-    {
-        int steps;
-        cout << "Ω–øÈ§JßA∑Q®´™∫®Bº∆ (øÈ§J0©Œ≠tº∆∞h•XπC¿∏): ";
-        if (!(cin >> steps))
-        {
-            cout << "øÈ§JµLÆƒ°IΩ–øÈ§Jº∆¶r°C\n";
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            continue;
-        }
-
-        if (steps <= 0)
-        {
-            cout << "∞h•XπC¿∏°C\n";
-            break;
-        }
-
-        for (int i = 0; i < steps; ++i)
-        {
-            stepsWithoutEncounter++;
-
-            // ≥]©wπJ®Ï©«™´™∫æ˜≤v
-            if (stepsWithoutEncounter >= 20 || rand() % 100 < 50)
-            {
-                cout << "\n§@∞¶≥••Õ©«™´•X≤{§F°I\n";
-                Monster monster = generateRandomMonster(player);
-                cout << "©«™´: " << monster.getName() << " (•Õ©R≠»: " << monster.getHealth() << ", ∏g≈Á≠»: " << monster.getExpReward() << ")\n";
-
-                while (!monster.isDefeated())
-                {
-                    cout << "øÔæ‹ßA™∫¶Ê∞ :\n1. ¥∂≥qß¿ª\n2. ®œ•ŒßﬁØ‡\n3. ∂i§J∞”´∞\nΩ–øÈ§JßA™∫øÔæ‹: ";
-                    int action;
-                    if (!(cin >> action))
-                    {
-                        cout << "øÈ§JµLÆƒ°IΩ–øÈ§Jº∆¶r°C\n";
-                        cin.clear();
-                        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-                        continue;
-                    }
-
-                    int damage = 0;
-
-                    if (action == 1)
-                    {
-                        damage = player->attack();
-                        cout << "ßA®œ•Œ§F¥∂≥qß¿ª°A≥y¶® " << damage << " ¬I∂ÀÆ`°C\n";
-                    }
-                    else if (action == 2)
-                    {
-                        cout << "øÔæ‹ßA™∫ßﬁØ‡:\n1. ßﬁØ‡1\n2. ßﬁØ‡2\nΩ–øÈ§JßA™∫øÔæ‹: ";
-                        int skillChoice;
-                        if (!(cin >> skillChoice))
-                        {
-                            cout << "øÈ§JµLÆƒ°IΩ–øÈ§Jº∆¶r°C\n";
-                            cin.clear();
-                            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-                            continue;
-                        }
-                        player->useSkill(skillChoice, damage);
-                        if (damage > 0) 
-                            cout << "ßA®œ•Œ§FßﬁØ‡°A≥y¶® " << damage << " ¬I∂ÀÆ`°C\n";
-                    }
-                    else if (action == 3) {
-    					Shop::enterShop(player);  // ∂i§J∞”´∞
-   						 continue;
-					}
-                    else
-                    {
-                        cout << "µLÆƒ™∫¶Ê∞ °C\n";
-                        continue;
-                    }
-
-                    monster.takeDamage(damage);
-
-                    if (monster.isDefeated()) {
-    					cout << "ßA¿ª±—§F " << monster.getName() << " ®√¿Ú±o§F " << monster.getExpReward() << " ∏g≈Á≠»°I\n";
-    					player->gainExp(monster.getExpReward());
-    					player->recoverOnKill();
-    					player->addGold(20);  // ¿ª±—©«™´´·¿Ú±o™˜πÙ
-    					cout << "ßA¿Ú±o§F 20 ™˜πÙ°I\n";
-					}
-
-
-                    else
-                    {
-                        cout << "©«™´≥—æl•Õ©R≠»: " << monster.getHealth() << "\n";
-                        // ©«™´∂i¶Ê§œ¿ª
-                        monster.counterAttack(player);
-                    }
-                }
-
-                stepsWithoutEncounter = 0;
+        int expDrop = 50;
+        for (size_t i = 0; i < team.size(); ++i) {
+            if (team[i]->getHP() > 0) {
+                team[i]->beatMonster(expDrop);
             }
-            else if (rand() % 100 < 10) {
-    int eventType = rand() % 4; // ©w∏qßÛ¶h©_πJ√˛´¨
-    switch (eventType) {
-    case 0: {
-        cout << "ßAµo≤{§F§@≠”ƒ_Ωc°A∏Ã≠±¶≥§@®«∏g≈Á≠»°I\n";
-        int bonusExp = rand() % 20 + 10;
-        player->gainExp(bonusExp);
-        cout << "ßA¿Ú±o§F " << bonusExp << " ∏g≈Á≠»°I\n";
-        break;
-    }
-    case 1: {
-        cout << "ßAπJ®Ï§F§@¶ÏØ´Øµ™∫™v¿¯™Ã°A´Ï¥_§F§@®«•Õ©R≠»°I\n";
-        int healAmount = static_cast<int>(player->getMaxHealth() * 0.25);
-        player->recoverHealth(healAmount);
-        cout << "ßA´Ï¥_§F " << healAmount << " ¬I•Õ©R≠»°I\n";
-        break;
-    }
-    case 2: {
-        cout << "ßAπJ®Ï§F§@¶Ï¨yÆˆ∞”§H°A¿Ú±o§F§@≤~≈]§O√ƒ§Ù°I\n";
-        int manaPotion = static_cast<int>(player->getMaxMana() * 0.3);
-        player->recoverMana(manaPotion);
-        cout << "ßA´Ï¥_§F " << manaPotion << " ¬I≈]§O°I\n";
-        break;
-    }
-    case 3: {
-        cout << "ßAæDπJ§F§@≠”≥¥®¿°I\n";
-        int trapDamage = static_cast<int>(player->getMaxHealth() * 0.15);
-        player->takeDamage(trapDamage);
-        cout << "ßA®¸®Ï§F " << trapDamage << " ¬I∂ÀÆ`°I\n";
-        break;
-    }
-}
+        }
 
-}
-
+        cout << "ÊòØÂê¶ÁπºÁ∫åÈÅäÊà≤Ôºü (1. ÁπºÁ∫å / 0. ÁµêÊùü): ";
+        int continueChoice;
+        cin >> continueChoice;
+        if (continueChoice == 0) {
+            playing = false;
         }
     }
 
-    delete player;
+    for (size_t i = 0; i < team.size(); ++i) {
+        delete team[i];
+    }
+
     return 0;
 }
-
